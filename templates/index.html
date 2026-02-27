@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BreastAI — Ultrasound Cancer Detection</title>
+  <meta name="description" content="AI-powered breast cancer detection using Deep Learning: Classification, Segmentation (UNet++), and Explainable AI (Grad-CAM, LIME, SHAP)" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 32 32" fill="none" width="28" height="28">
+            <circle cx="16" cy="16" r="14" stroke="#60A5FA" stroke-width="2"/>
+            <path d="M10 16c0-3.3 2.7-6 6-6s6 2.7 6 6-2.7 6-6 6" stroke="#F87171" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="3" fill="#60A5FA"/>
+          </svg>
+        </div>
+        <span class="logo-text">BreastAI</span>
+      </div>
+      <nav class="header-nav">
+        <span class="nav-badge">Deep Learning · Ultrasound · XAI</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ── Hero section ─────────────────────────────────────────────── -->
+    <section class="hero">
+      <h1 class="hero-title">Breast Cancer Detection <br><span class="gradient-text">with Explainable AI</span></h1>
+      <p class="hero-sub">Upload a breast ultrasound image to get instant classification, UNet++ tumor segmentation, and visual explanations via Grad-CAM, LIME &amp; SHAP.</p>
+    </section>
+
+    <!-- ── Upload card ──────────────────────────────────────────────── -->
+    <section class="card upload-card" id="upload-section">
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*" hidden />
+        <div class="upload-icon">
+          <svg viewBox="0 0 48 48" fill="none" width="52" height="52">
+            <circle cx="24" cy="24" r="22" fill="rgba(96,165,250,0.1)" stroke="#60A5FA" stroke-width="1.5"/>
+            <path d="M24 32V20M18 26l6-6 6 6" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 36h20" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="upload-title">Drag &amp; drop ultrasound image</p>
+        <p class="upload-sub">or <button class="browse-btn" id="browse-btn">browse file</button></p>
+        <p class="upload-hint">PNG, JPG · Max 10 MB</p>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-row" id="preview-row" style="display:none;">
+        <img id="preview-img" src="" alt="Preview" class="preview-img" />
+        <div class="preview-meta">
+          <p id="preview-name" class="preview-name"></p>
+          <button id="analyze-btn" class="btn-primary">
+            <span id="btn-text">Analyze Image</span>
+            <div class="spinner" id="spinner" style="display:none;"></div>
+          </button>
+          <button id="reset-btn" class="btn-ghost">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Results (hidden until analysis) ─────────────────────────── -->
+    <div id="results-section" style="display:none;">
+
+      <!-- Classification Card -->
+      <section class="card result-card" id="clf-card">
+        <h2 class="card-title">
+          <span class="card-icon">🔬</span> Classification Result
+        </h2>
+        <div class="clf-result">
+          <div class="diagnosis-chip" id="diagnosis-chip">—</div>
+          <div class="confidence-block">
+            <div class="conf-label">Confidence: <span id="conf-value">—</span></div>
+            <div class="conf-bar-bg"><div class="conf-bar" id="conf-bar"></div></div>
+          </div>
+        </div>
+        <div class="prob-row" id="prob-row"></div>
+      </section>
+
+      <!-- Segmentation Card -->
+      <section class="card result-card" id="seg-card" style="display:none;">
+        <h2 class="card-title">
+          <span class="card-icon">📐</span> UNet++ Tumor Segmentation
+        </h2>
+        <p class="card-sub">Input | Predicted Mask | Overlay (green = detected region)</p>
+        <img id="seg-img" src="" alt="Segmentation" class="result-img wide-img" />
+      </section>
+
+      <!-- XAI Card -->
+      <section class="card result-card">
+        <h2 class="card-title">
+          <span class="card-icon">🧠</span> Explainable AI (XAI)
+        </h2>
+        <p class="card-sub">Visual explanations highlighting regions that drove the classification decision.</p>
+
+        <!-- Tabs -->
+        <div class="xai-tabs" id="xai-tabs">
+          <button class="xai-tab active" data-tab="gradcam">Grad-CAM</button>
+          <button class="xai-tab" data-tab="gradcampp">Grad-CAM++</button>
+          <button class="xai-tab" data-tab="scorecam">Score-CAM</button>
+          <button class="xai-tab" data-tab="lime">LIME</button>
+          <button class="xai-tab" data-tab="shap">SHAP</button>
+        </div>
+
+        <div class="xai-panels">
+          <div class="xai-panel active" id="panel-gradcam">
+            <div class="xai-loader" id="loader-gradcam"><div class="spinner"></div><p>Generating Grad-CAM…</p></div>
+            <img class="result-img xai-img" id="img-gradcam" src="" alt="Grad-CAM" style="display:none;" />
+            <p class="xai-desc">Grad-CAM uses gradients flowing into the final conv layer to produce a coarse localization heatmap highlighting important regions.</p>
+          </div>
+          <div class="xai-panel" id="panel-gradcampp">
+            <div class="xai-loader" id="loader-gradcampp"><div class="spinner"></div><p>Generating Grad-CAM++…</p></div>
+            <img class="result-img xai-img" id="img-gradcampp" src="" alt="Grad-CAM++" style="display:none;" />
+            <p class="xai-desc">Grad-CAM++ improves Grad-CAM by using a weighted average of gradients, providing better object localization for multiple targets.</p>
+          </div>
+          <div class="xai-panel" id="panel-scorecam">
+            <div class="xai-loader" id="loader-scorecam"><div class="spinner"></div><p>Generating Score-CAM…</p></div>
+            <img class="result-img xai-img" id="img-scorecam" src="" alt="Score-CAM" style="display:none;" />
+            <p class="xai-desc">Score-CAM is gradient-free and generates explanations by measuring how each activation map affects the model output score.</p>
+          </div>
+          <div class="xai-panel" id="panel-lime">
+            <div class="xai-loader" id="loader-lime"><div class="spinner"></div><p>Generating LIME explanation…</p></div>
+            <img class="result-img xai-img" id="img-lime" src="" alt="LIME" style="display:none;" />
+            <p class="xai-desc">LIME (Local Interpretable Model-agnostic Explanations) segments the image into superpixels and identifies which regions most influence the prediction.</p>
+          </div>
+          <div class="xai-panel" id="panel-shap">
+            <div class="xai-loader" id="loader-shap"><div class="spinner"></div><p>Generating SHAP values…</p></div>
+            <img class="result-img xai-img" id="img-shap" src="" alt="SHAP" style="display:none;" />
+            <p class="xai-desc">SHAP (SHapley Additive exPlanations) assigns each pixel a contribution value based on game theory, producing pixel-level attribution maps.</p>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /results-section -->
+
+    <!-- ── Architecture note ─────────────────────────────────────────── -->
+    <section class="card info-card">
+      <h3 class="info-title">Architecture Overview</h3>
+      <div class="arch-grid">
+        <div class="arch-item">
+          <div class="arch-icon">⚡</div>
+          <h4>EfficientNet-B0</h4>
+          <p>Transfer learning classifier (ImageNet pretrained) fine-tuned for 3-class breast cancer diagnosis.</p>
+        </div>
+        <div class="arch-item">
+          <div class="arch-icon">🔷</div>
+          <h4>UNet++</h4>
+          <p>Dense skip connections &amp; deep supervision for precise tumor region segmentation from ultrasound images.</p>
+        </div>
+        <div class="arch-item">
+          <div class="arch-icon">🧩</div>
+          <h4>Grad-CAM / LIME / SHAP</h4>
+          <p>Three complementary XAI methods providing gradient, perturbation, and game-theory based visual explanations.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>BreastAI · Deep Learning for Breast Ultrasound Analysis · Research Use Only</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
