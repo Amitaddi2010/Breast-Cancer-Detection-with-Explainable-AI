@@ -33,8 +33,6 @@ env/
 
 # Project specific
 Dataset_BUSI_with_GT/
-outputs/
-*.pth
-*.json
-*.png
+outputs/*.png
+outputs/*.json
 .gemini/
