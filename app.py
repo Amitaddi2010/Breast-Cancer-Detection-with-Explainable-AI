@@ -1,46 +1,50 @@
 """
 app.py — Flask web application for breast cancer detection.
-Runs classification (EfficientNet) + segmentation (UNet++) + XAI (Grad-CAM/LIME/SHAP).
+Optimized for Render Free Tier (512MB RAM) using lazy loading and garbage collection.
 """
 
 import os
 import io
 import base64
 import numpy as np
-import torch
+import gc
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from PIL import Image
+import cv2
 
 from config import DEVICE, CLF_CHECKPOINT, UNETPP_CHECKPOINT, CLASS_NAMES, SEG_IMG_SIZE
-from model import get_classifier
-from unet_plus_plus import get_unetpp
-from xai import predict as clf_predict, generate_all_cams, cam_to_base64
-import cv2
 
 app = Flask(__name__)
 CORS(app)
 
-# ── Load models at startup ────────────────────────────────────────────────────
-print("[app.py] Loading models...")
+# ── Lazy-loaded Models ────────────────────────────────────────────────────────
+_clf_model = None
+_seg_model = None
 
-clf_model = get_classifier(pretrained=False).to(DEVICE)
-if os.path.exists(CLF_CHECKPOINT):
-    clf_model.load_state_dict(torch.load(CLF_CHECKPOINT, map_location=DEVICE))
-    print(f"[app.py] Classifier loaded from {CLF_CHECKPOINT}")
-else:
-    print(f"[app.py] WARNING: No classifier checkpoint at {CLF_CHECKPOINT}")
-clf_model.eval()
+def get_clf():
+    global _clf_model
+    if _clf_model is None:
+        print("[app.py] Lazy loading classifier...")
+        import torch
+        from model import get_classifier
+        _clf_model = get_classifier(pretrained=False).to(DEVICE)
+        if os.path.exists(CLF_CHECKPOINT):
+            _clf_model.load_state_dict(torch.load(CLF_CHECKPOINT, map_location=DEVICE))
+        _clf_model.eval()
+    return _clf_model
 
-seg_model = get_unetpp(deep_supervision=True).to(DEVICE)
-if os.path.exists(UNETPP_CHECKPOINT):
-    seg_model.load_state_dict(torch.load(UNETPP_CHECKPOINT, map_location=DEVICE))
-    print(f"[app.py] UNet++ loaded from {UNETPP_CHECKPOINT}")
-else:
-    print(f"[app.py] WARNING: No segmentation checkpoint at {UNETPP_CHECKPOINT}")
-seg_model.eval()
-
-print("[app.py] Models ready.\n")
+def get_seg():
+    global _seg_model
+    if _seg_model is None:
+        print("[app.py] Lazy loading UNet++...")
+        import torch
+        from unet_plus_plus import get_unetpp
+        _seg_model = get_unetpp(deep_supervision=True).to(DEVICE)
+        if os.path.exists(UNETPP_CHECKPOINT):
+            _seg_model.load_state_dict(torch.load(UNETPP_CHECKPOINT, map_location=DEVICE))
+        _seg_model.eval()
+    return _seg_model
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,6 +57,8 @@ def array_to_base64(img_rgb: np.ndarray) -> str:
 
 def run_segmentation(image: Image.Image) -> str:
     """Run UNet++, return base64 overlay PNG."""
+    import torch
+    seg_model = get_seg()
     img_arr = np.array(image.convert("RGB").resize((SEG_IMG_SIZE, SEG_IMG_SIZE)))
     img_norm = img_arr.astype(np.float32) / 255.0
     tensor = torch.tensor(img_norm.transpose(2, 0, 1)).unsqueeze(0).float().to(DEVICE)
@@ -95,6 +101,7 @@ def predict():
 
     # ── Classification ──────────────────────────────────────────────────────
     try:
+        from xai import predict as clf_predict
         class_name, confidence, probs = clf_predict(tmp_path, DEVICE)
         prob_dict = {CLASS_NAMES[i]: float(probs[i] * 100) for i in range(len(CLASS_NAMES))}
     except Exception as e:
@@ -111,6 +118,7 @@ def predict():
     # ── XAI: Grad-CAM, Grad-CAM++, Score-CAM ───────────────────────────────
     cam_results = {}
     try:
+        from xai import generate_all_cams, cam_to_base64
         cams = generate_all_cams(tmp_path, DEVICE)
         cam_results = {name: cam_to_base64(overlay) for name, overlay in cams.items()}
     except Exception as e:
@@ -120,7 +128,9 @@ def predict():
     lime_b64 = None
     try:
         from xai_lime import generate_lime, lime_to_base64
-        lime_overlay = generate_lime(tmp_path, n_samples=500)  # faster for web
+        import matplotlib
+        matplotlib.use('Agg') # Ensure headless mode
+        lime_overlay = generate_lime(tmp_path, n_samples=300)  # Lower samples for Render memory
         lime_b64 = lime_to_base64(lime_overlay)
     except Exception as e:
         print(f"[app.py] LIME error: {e}")
@@ -129,10 +139,15 @@ def predict():
     shap_b64 = None
     try:
         from xai_shap import generate_shap, shap_to_base64
+        import matplotlib
+        matplotlib.use('Agg') # Ensure headless mode
         shap_overlay = generate_shap(tmp_path)
         shap_b64 = shap_to_base64(shap_overlay)
     except Exception as e:
         print(f"[app.py] SHAP error: {e}")
+
+    # Free memory
+    gc.collect()
 
     return jsonify({
         'class':       class_name,
@@ -149,7 +164,7 @@ def predict():
 
 @app.route('/health')
 def health():
-    return jsonify({'status': 'ok', 'device': str(DEVICE)})
+    return jsonify({'status': 'ok'})
 
 
 if __name__ == '__main__':
