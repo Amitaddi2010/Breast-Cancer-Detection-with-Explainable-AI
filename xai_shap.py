@@ -33,20 +33,10 @@ _transform = A.Compose([
     ToTensorV2(),
 ])
 
-_model      = None
+
+
+
 _background = None
-
-
-def _load_model():
-    global _model
-    if _model is None:
-        m = get_classifier(pretrained=False).to(DEVICE)
-        if os.path.exists(CLF_CHECKPOINT):
-            m.load_state_dict(torch.load(CLF_CHECKPOINT, map_location=DEVICE))
-        m.eval()
-        _model = m
-    return _model
-
 
 def _get_background(n: int = XAI_SHAP_BACKGROUND):
     """Sample n random images from training set as SHAP background."""
@@ -63,12 +53,11 @@ def _get_background(n: int = XAI_SHAP_BACKGROUND):
     return _background
 
 
-def generate_shap(image_path: str) -> np.ndarray:
+def generate_shap(model: torch.nn.Module, image_path: str) -> np.ndarray:
     """
     Generate SHAP pixel attribution map.
     Returns: HxWx3 uint8 image with SHAP heatmap overlaid.
     """
-    model = _load_model()
     img_arr = np.array(Image.open(image_path).convert("RGB"))
     tensor  = _transform(image=img_arr)["image"].unsqueeze(0).to(DEVICE)
     background = _get_background()
@@ -108,8 +97,14 @@ def shap_to_base64(overlay_rgb: np.ndarray) -> str:
 if __name__ == "__main__":
     import glob
     imgs = [f for f in glob.glob("Dataset_BUSI_with_GT/benign/*.png") if "_mask" not in f]
+    from model import get_classifier
+    m = get_classifier(pretrained=False).to(DEVICE)
+    if os.path.exists(CLF_CHECKPOINT):
+        m.load_state_dict(torch.load(CLF_CHECKPOINT, map_location=DEVICE))
+    m.eval()
+
     print(f"Testing SHAP on: {imgs[0]}")
-    result = generate_shap(imgs[0])
+    result = generate_shap(m, imgs[0])
     out_path = os.path.join("outputs", "xai_shap.png")
     os.makedirs("outputs", exist_ok=True)
     Image.fromarray(result).save(out_path)

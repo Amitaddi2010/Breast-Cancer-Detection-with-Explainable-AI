@@ -37,40 +37,25 @@ _transform = A.Compose([
     ToTensorV2(),
 ])
 
-_model = None
-
-def _load_model():
-    global _model
-    if _model is None:
-        m = get_classifier(pretrained=False).to(DEVICE)
-        if os.path.exists(CLF_CHECKPOINT):
-            m.load_state_dict(torch.load(CLF_CHECKPOINT, map_location=DEVICE))
-        m.eval()
-        _model = m
-    return _model
-
-
-def _predict_fn(images: np.ndarray) -> np.ndarray:
-    """
-    LIME calls this with N×H×W×3 uint8 arrays.
-    Returns N×num_classes probability arrays.
-    """
-    model = _load_model()
-    probs_list = []
-    for img in images:
-        tensor = _transform(image=img)["image"].unsqueeze(0).to(DEVICE)
-        with torch.no_grad():
-            logits = model(tensor)
-            p = torch.softmax(logits, dim=1)[0].cpu().numpy()
-        probs_list.append(p)
-    return np.array(probs_list)
-
-
-def generate_lime(image_path: str, n_samples: int = XAI_N_LIME_SAMPLES) -> np.ndarray:
+def generate_lime(model: torch.nn.Module, image_path: str, n_samples: int = XAI_N_LIME_SAMPLES) -> np.ndarray:
     """
     Generate LIME explanation.
     Returns: HxWx3 uint8 annotated image with top superpixel boundaries.
     """
+    def _predict_fn(images: np.ndarray) -> np.ndarray:
+        """
+        LIME calls this with N×H×W×3 uint8 arrays.
+        Returns N×num_classes probability arrays.
+        """
+        probs_list = []
+        for img in images:
+            tensor = _transform(image=img)["image"].unsqueeze(0).to(DEVICE)
+            with torch.no_grad():
+                logits = model(tensor)
+                p = torch.softmax(logits, dim=1)[0].cpu().numpy()
+            probs_list.append(p)
+        return np.array(probs_list)
+
     img_arr = np.array(Image.open(image_path).convert("RGB").resize(
         (CLF_IMG_SIZE, CLF_IMG_SIZE)))
 
@@ -109,8 +94,15 @@ def lime_to_base64(overlay_rgb: np.ndarray) -> str:
 if __name__ == "__main__":
     import glob
     imgs = [f for f in glob.glob("Dataset_BUSI_with_GT/benign/*.png") if "_mask" not in f]
+    from model import get_classifier
+    import torch
+    m = get_classifier(pretrained=False).to(DEVICE)
+    if os.path.exists(CLF_CHECKPOINT):
+        m.load_state_dict(torch.load(CLF_CHECKPOINT, map_location=DEVICE))
+    m.eval()
+
     print(f"Testing LIME on: {imgs[0]}")
-    result = generate_lime(imgs[0], n_samples=200)
+    result = generate_lime(m, imgs[0], n_samples=200)
     out_path = os.path.join("outputs", "xai_lime.png")
     os.makedirs("outputs", exist_ok=True)
     Image.fromarray(result).save(out_path)

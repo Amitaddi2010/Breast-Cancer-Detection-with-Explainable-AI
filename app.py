@@ -102,7 +102,8 @@ def predict():
     # ── Classification ──────────────────────────────────────────────────────
     try:
         from xai import predict as clf_predict
-        class_name, confidence, probs = clf_predict(tmp_path, DEVICE)
+        clf_model = get_clf()
+        class_name, confidence, probs = clf_predict(clf_model, tmp_path, DEVICE)
         prob_dict = {CLASS_NAMES[i]: float(probs[i] * 100) for i in range(len(CLASS_NAMES))}
     except Exception as e:
         return jsonify({'error': f'Classification failed: {str(e)}'}), 500
@@ -119,7 +120,8 @@ def predict():
     cam_results = {}
     try:
         from xai import generate_all_cams, cam_to_base64
-        cams = generate_all_cams(tmp_path, DEVICE)
+        clf_model = get_clf()
+        cams = generate_all_cams(clf_model, tmp_path, DEVICE)
         cam_results = {name: cam_to_base64(overlay) for name, overlay in cams.items()}
     except Exception as e:
         print(f"[app.py] CAM error: {e}")
@@ -130,7 +132,8 @@ def predict():
         from xai_lime import generate_lime, lime_to_base64
         import matplotlib
         matplotlib.use('Agg') # Ensure headless mode
-        lime_overlay = generate_lime(tmp_path, n_samples=300)  # Lower samples for Render memory
+        clf_model = get_clf()
+        lime_overlay = generate_lime(clf_model, tmp_path, n_samples=300)  # Lower samples for Render memory
         lime_b64 = lime_to_base64(lime_overlay)
     except Exception as e:
         print(f"[app.py] LIME error: {e}")
@@ -141,7 +144,8 @@ def predict():
         from xai_shap import generate_shap, shap_to_base64
         import matplotlib
         matplotlib.use('Agg') # Ensure headless mode
-        shap_overlay = generate_shap(tmp_path)
+        clf_model = get_clf()
+        shap_overlay = generate_shap(clf_model, tmp_path)
         shap_b64 = shap_to_base64(shap_overlay)
     except Exception as e:
         print(f"[app.py] SHAP error: {e}")

@@ -36,24 +36,9 @@ def preprocess_image(image_path: str, device=DEVICE):
     return tensor, rgb_float
 
 
-# ── Load model ────────────────────────────────────────────────────────────────
-_cached_model = None
-
-def load_model(device=DEVICE) -> torch.nn.Module:
-    global _cached_model
-    if _cached_model is None:
-        model = get_classifier(pretrained=False).to(device)
-        if os.path.exists(CLF_CHECKPOINT):
-            model.load_state_dict(torch.load(CLF_CHECKPOINT, map_location=device))
-        model.eval()
-        _cached_model = model
-    return _cached_model
-
-
 # ── Predict class ─────────────────────────────────────────────────────────────
-def predict(image_path: str, device=DEVICE):
+def predict(model: torch.nn.Module, image_path: str, device=DEVICE):
     """Returns (class_name, confidence_pct, probs_array)."""
-    model = load_model(device)
     tensor, _ = preprocess_image(image_path, device)
     with torch.no_grad():
         logits = model(tensor)
@@ -70,12 +55,11 @@ CAM_METHODS = {
 }
 
 
-def generate_all_cams(image_path: str, device=DEVICE) -> dict:
+def generate_all_cams(model: torch.nn.Module, image_path: str, device=DEVICE) -> dict:
     """
     Generate heatmap overlays for all three CAM methods.
     Returns dict: {method_name: overlay_RGB_uint8}
     """
-    model = load_model(device)
     tensor, rgb_float = preprocess_image(image_path, device)
 
     # Target: predicted class
