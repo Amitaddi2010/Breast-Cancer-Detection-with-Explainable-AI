@@ -44,6 +44,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLF_CHECKPOINT  = os.path.join(OUTPUT_DIR, "best_classifier.pth")
 UNET_CHECKPOINT = os.path.join(OUTPUT_DIR, "best_unet.pth")
 UNETPP_CHECKPOINT = os.path.join(OUTPUT_DIR, "best_unetpp.pth")
+REPSEGNET_CHECKPOINT = os.path.join(OUTPUT_DIR, "best_repsegnet.pth")
 
 # ─── Normalization (ImageNet stats for classifier) ───────────────────────────
 NORMALIZE_MEAN = [0.485, 0.456, 0.406]

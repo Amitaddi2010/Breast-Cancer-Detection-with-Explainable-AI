@@ -13,7 +13,7 @@ from flask_cors import CORS
 from PIL import Image
 import cv2
 
-from config import DEVICE, CLF_CHECKPOINT, UNETPP_CHECKPOINT, CLASS_NAMES, SEG_IMG_SIZE
+from config import DEVICE, CLF_CHECKPOINT, UNETPP_CHECKPOINT, REPSEGNET_CHECKPOINT, CLASS_NAMES, SEG_IMG_SIZE
 
 app = Flask(__name__)
 CORS(app)
@@ -21,6 +21,7 @@ CORS(app)
 # ── Lazy-loaded Models ────────────────────────────────────────────────────────
 _clf_model = None
 _seg_model = None
+_repseg_model = None
 
 def get_clf():
     global _clf_model
@@ -46,6 +47,18 @@ def get_seg():
         _seg_model.eval()
     return _seg_model
 
+def get_repseg():
+    global _repseg_model
+    if _repseg_model is None:
+        print("[app.py] Lazy loading RepSegNet...")
+        import torch
+        from repsegnet import get_repsegnet
+        _repseg_model = get_repsegnet().to(DEVICE)
+        if os.path.exists(REPSEGNET_CHECKPOINT):
+            _repseg_model.load_state_dict(torch.load(REPSEGNET_CHECKPOINT, map_location=DEVICE))
+        _repseg_model.eval()
+    return _repseg_model
+
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 def array_to_base64(img_rgb: np.ndarray) -> str:
@@ -55,10 +68,10 @@ def array_to_base64(img_rgb: np.ndarray) -> str:
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
 
-def run_segmentation(image: Image.Image) -> str:
-    """Run UNet++, return base64 overlay PNG."""
+def run_segmentation(image: Image.Image, use_repseg=False) -> str:
+    """Run UNet++ or RepSegNet, return base64 overlay PNG."""
     import torch
-    seg_model = get_seg()
+    seg_model = get_repseg() if use_repseg else get_seg()
     img_arr = np.array(image.convert("RGB").resize((SEG_IMG_SIZE, SEG_IMG_SIZE)))
     img_norm = img_arr.astype(np.float32) / 255.0
     tensor = torch.tensor(img_norm.transpose(2, 0, 1)).unsqueeze(0).float().to(DEVICE)
@@ -110,11 +123,18 @@ def predict():
 
     # ── Segmentation ────────────────────────────────────────────────────────
     seg_b64 = None
+    repseg_b64 = None
     if os.path.exists(UNETPP_CHECKPOINT):
         try:
-            seg_b64 = run_segmentation(image)
+            seg_b64 = run_segmentation(image, use_repseg=False)
         except Exception as e:
-            print(f"[app.py] Segmentation error: {e}")
+            print(f"[app.py] UNet++ Segmentation error: {e}")
+            
+    if os.path.exists(REPSEGNET_CHECKPOINT):
+        try:
+            repseg_b64 = run_segmentation(image, use_repseg=True)
+        except Exception as e:
+            print(f"[app.py] RepSegNet Segmentation error: {e}")
 
     # ── XAI: Grad-CAM, Grad-CAM++, Score-CAM ───────────────────────────────
     cam_results = {}
@@ -158,6 +178,7 @@ def predict():
         'confidence':  round(confidence, 2),
         'probabilities': prob_dict,
         'segmentation':  seg_b64,
+        'repsegnet':     repseg_b64,
         'gradcam':       cam_results.get('Grad-CAM'),
         'gradcampp':     cam_results.get('Grad-CAM++'),
         'scorecam':      cam_results.get('Score-CAM'),

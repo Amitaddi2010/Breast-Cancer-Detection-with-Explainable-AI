@@ -113,9 +113,25 @@ function renderResults(data) {
 
   // ── Segmentation ──────────────────────────────────────────────────
   const segCard = document.getElementById('seg-card');
-  if (data.segmentation) {
+  if (data.segmentation || data.repsegnet) {
     segCard.style.display = 'block';
-    document.getElementById('seg-img').src = 'data:image/png;base64,' + data.segmentation;
+    
+    // UNet++
+    if (data.segmentation) {
+        document.getElementById('unetpp-container').style.display = 'block';
+        document.getElementById('seg-img').src = 'data:image/png;base64,' + data.segmentation;
+    } else {
+        document.getElementById('unetpp-container').style.display = 'none';
+    }
+    
+    // RepSegNet
+    const repContainer = document.getElementById('repseg-container');
+    if (data.repsegnet) {
+        repContainer.style.display = 'block';
+        document.getElementById('repseg-img').src = 'data:image/png;base64,' + data.repsegnet;
+    } else {
+        repContainer.style.display = 'none';
+    }
   }
 
   // ── XAI images ────────────────────────────────────────────────────

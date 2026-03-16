@@ -88,10 +88,19 @@
       <!-- Segmentation Card -->
       <section class="card result-card" id="seg-card" style="display:none;">
         <h2 class="card-title">
-          <span class="card-icon">📐</span> UNet++ Tumor Segmentation
+          <span class="card-icon">📐</span> Tumor Segmentation
         </h2>
         <p class="card-sub">Input | Predicted Mask | Overlay (green = detected region)</p>
-        <img id="seg-img" src="" alt="Segmentation" class="result-img wide-img" />
+        
+        <div id="unetpp-container">
+          <p style="color:#9CA3AF; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 500;">UNet++ Base Model</p>
+          <img id="seg-img" src="" alt="UNet++ Segmentation" class="result-img wide-img" />
+        </div>
+        
+        <div id="repseg-container" style="display:none; margin-top: 1.5rem;">
+          <p style="color:#FCD34D; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 500;">RepSegNet (2026 SOTA)</p>
+          <img id="repseg-img" src="" alt="RepSegNet Segmentation" class="result-img wide-img" />
+        </div>
       </section>
 
       <!-- XAI Card -->
@@ -152,8 +161,8 @@
         </div>
         <div class="arch-item">
           <div class="arch-icon">🔷</div>
-          <h4>UNet++</h4>
-          <p>Dense skip connections &amp; deep supervision for precise tumor region segmentation from ultrasound images.</p>
+          <h4>UNet++ & RepSegNet</h4>
+          <p>Dense skip connections (UNet++) and 2026 reparameterized attention (RepSegNet) for precise tumor region segmentation.</p>
         </div>
         <div class="arch-item">
           <div class="arch-icon">🧩</div>

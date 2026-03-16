@@ -18,6 +18,7 @@ from config import (
 from seg_dataset import get_seg_dataloaders
 from unet import get_unet
 from unet_plus_plus import get_unetpp
+from repsegnet import get_repsegnet
 
 
 # ── Pixel-wise metrics ────────────────────────────────────────────────────────
@@ -114,20 +115,20 @@ def plot_comparison_grid(samples: list, model_name: str, save_path: str):
 
 
 def print_metrics_table(results: dict):
-    """Print side-by-side comparison (paper Table 2)."""
-    print(f"\n{'='*70}")
-    print("  Segmentation Metrics — U-Net vs UNet++ (Paper Table 2 & 3)")
-    print(f"{'='*70}")
+    """Print side-by-side comparison."""
+    print(f"\n{'='*90}")
+    print("  Segmentation Metrics — U-Net vs UNet++ vs RepSegNet")
+    print(f"{'='*90}")
     header = f"{'Metric':<20}" + "".join(f"{k:>20}" for k in results.keys())
     print(header)
-    print('-' * 70)
+    print('-' * 90)
     metrics = ['accuracy', 'precision', 'recall', 'f1', 'dice', 'iou']
     for m in metrics:
         row = f"{m.capitalize():<20}"
         for model_m in results.values():
             row += f"{model_m[m]:>19.2f}%"
         print(row)
-    print('=' * 70)
+    print('=' * 90)
 
 
 def evaluate_segmentation():
@@ -135,10 +136,11 @@ def evaluate_segmentation():
     all_results  = {}
     all_samples  = {}
 
+    from config import REPSEGNET_CHECKPOINT
     model_configs = [
-        ("U-Net",   get_unet(),                UNET_CHECKPOINT,   False),
-        ("UNet++",  get_unetpp(deep_supervision=True),
-                                               UNETPP_CHECKPOINT, True),
+        ("U-Net",     get_unet(),                UNET_CHECKPOINT,      False),
+        ("UNet++",    get_unetpp(deep_supervision=True), UNETPP_CHECKPOINT,    True),
+        ("RepSegNet", get_repsegnet(),           REPSEGNET_CHECKPOINT, False)
     ]
 
     for model_name, model, checkpoint, is_unetpp in model_configs:
