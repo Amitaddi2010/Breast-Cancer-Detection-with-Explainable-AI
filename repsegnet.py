@@ -59,7 +59,7 @@ class RepSegNet(nn.Module):
     RepSegNet: A modern (2026) lightweight reparameterized U-Net for medical image segmentation.
     Combines RepBlocks for feature extraction and ECA for channel attention.
     """
-    def __init__(self, in_channels=3, out_channels=1, features=[32, 64, 128, 256]):
+    def __init__(self, in_channels=3, out_channels=1, features=[64, 128, 256, 512]):
         super().__init__()
         self.downs = nn.ModuleList()
         self.ups = nn.ModuleList()
@@ -87,7 +87,8 @@ class RepSegNet(nn.Module):
             self.ups.append(
                 nn.Sequential(
                     RepConvBlock(feature * 2, feature),
-                    ECA_Attention(feature)
+                    ECA_Attention(feature),
+                    nn.Dropout2d(0.2)
                 )
             )
             

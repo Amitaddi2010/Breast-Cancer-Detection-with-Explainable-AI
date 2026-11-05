@@ -1,0 +1,42 @@
+{
+  "Classic U-Net": {
+    "trainable_params_M": 31.04,
+    "gflops": 193.18,
+    "gpu_latency_ms": 30.21,
+    "gpu_fps": 33.1,
+    "cpu_latency_ms": 667.4,
+    "sec_per_epoch": 50.0,
+    "train_time_no_tuning_min": 41.7,
+    "train_time_with_tuning_hours": 10.42
+  },
+  "UNet++": {
+    "trainable_params_M": 35.28,
+    "gflops": 477.27,
+    "gpu_latency_ms": 80.05,
+    "gpu_fps": 12.5,
+    "cpu_latency_ms": 1967.1,
+    "sec_per_epoch": 266.0,
+    "train_time_no_tuning_min": 221.7,
+    "train_time_with_tuning_hours": 55.42
+  },
+  "RepSegNet V1": {
+    "trainable_params_M": 34.19,
+    "gflops": 214.46,
+    "gpu_latency_ms": 48.5,
+    "gpu_fps": 20.6,
+    "cpu_latency_ms": 1151.4,
+    "sec_per_epoch": 81.0,
+    "train_time_no_tuning_min": 67.5,
+    "train_time_with_tuning_hours": 16.88
+  },
+  "RepSegNet V2 (Proposed)": {
+    "trainable_params_M": 15.07,
+    "gflops": 8.86,
+    "gpu_latency_ms": 16.45,
+    "gpu_fps": 60.8,
+    "cpu_latency_ms": 87.6,
+    "sec_per_epoch": 14.8,
+    "train_time_no_tuning_min": 12.4,
+    "train_time_with_tuning_hours": 3.09
+  }
+}

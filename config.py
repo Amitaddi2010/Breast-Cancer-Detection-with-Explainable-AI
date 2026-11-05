@@ -18,14 +18,15 @@ CLASS_NAMES = ["benign", "malignant", "normal"]   # alphabetical = 0,1,2
 NUM_CLASSES = 3
 
 # ─── Image Sizes ─────────────────────────────────────────────────────────────
-SEG_IMG_SIZE  = 128   # Segmentation (paper Section 3.2): resize to 128×128
+SEG_IMG_SIZE  = 512   # Segmentation: resize to 512x512 for full boundary preservation
 CLF_IMG_SIZE  = 224   # Classification: EfficientNet standard input
+SEG_ENCODER_NAME = 'efficientnet_b3'  # High capacity pretrained backbone
 
 # ─── Training Hyperparameters (Paper Section 3.5.2 & Table 4) ────────────────
-BATCH_SIZE    = 32    # optimal per paper Table 4
-LEARNING_RATE = 0.001 # paper optimal LR
-NUM_EPOCHS    = 50    # paper training protocol
-EARLY_STOP_PATIENCE = 10
+BATCH_SIZE    = 8     # reduced for 384×384 resolution memory
+LEARNING_RATE = 3e-4  # tuned for AdamW + cosine warmup
+NUM_EPOCHS    = 100   # extended for cosine annealing convergence
+EARLY_STOP_PATIENCE = 20
 
 # Dice + BCE combined loss weight factor λ (paper Eq. 1)
 # L = λ·BCE + (1-λ)·Dice
@@ -45,6 +46,7 @@ CLF_CHECKPOINT  = os.path.join(OUTPUT_DIR, "best_classifier.pth")
 UNET_CHECKPOINT = os.path.join(OUTPUT_DIR, "best_unet.pth")
 UNETPP_CHECKPOINT = os.path.join(OUTPUT_DIR, "best_unetpp.pth")
 REPSEGNET_CHECKPOINT = os.path.join(OUTPUT_DIR, "best_repsegnet.pth")
+REPSEGNET_V2_CHECKPOINT = os.path.join(OUTPUT_DIR, "best_repsegnet_v2.pth")
 
 # ─── Normalization (ImageNet stats for classifier) ───────────────────────────
 NORMALIZE_MEAN = [0.485, 0.456, 0.406]

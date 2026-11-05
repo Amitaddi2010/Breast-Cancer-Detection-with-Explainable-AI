@@ -1,0 +1,143 @@
+{
+  "num_test_images": 98,
+  "shapiro_normality": {
+    "dice": {
+      "W": 0.6447771635796027,
+      "p_value": 4.692520292485495e-14
+    },
+    "iou": {
+      "W": 0.7465434548572119,
+      "p_value": 1.0329256559330362e-11
+    }
+  },
+  "bootstrap_confidence_intervals_95": {
+    "U-Net": {
+      "dice_mean": 60.15492780327355,
+      "dice_95ci": [
+        54.11849522763722,
+        65.87614053342114
+      ],
+      "iou_mean": 48.89131250405078,
+      "iou_95ci": [
+        43.2719193753659,
+        54.31138871999177
+      ]
+    },
+    "UNet++": {
+      "dice_mean": 50.87918323967955,
+      "dice_95ci": [
+        45.39729312971303,
+        56.16595080982474
+      ],
+      "iou_mean": 38.59215201953058,
+      "iou_95ci": [
+        33.74607489325571,
+        43.44746054978912
+      ]
+    },
+    "RepSegNet (V1)": {
+      "dice_mean": 59.2755504222676,
+      "dice_95ci": [
+        53.47573628295974,
+        64.88534373766379
+      ],
+      "iou_mean": 47.54190799265461,
+      "iou_95ci": [
+        41.98219119418761,
+        53.01111030566022
+      ]
+    },
+    "RepSegNet V2 (Ours)": {
+      "dice_mean": 79.9703727836105,
+      "dice_95ci": [
+        74.92575008406617,
+        84.5912646048076
+      ],
+      "iou_mean": 71.69547088310539,
+      "iou_95ci": [
+        66.58208679070681,
+        76.57333476592406
+      ]
+    }
+  },
+  "pairwise_comparisons_with_repsegnet_v2": {
+    "U-Net": {
+      "t_test_dice": {
+        "t_stat": 8.329221215149278,
+        "p_value": 5.333118792255731e-13
+      },
+      "wilcoxon_dice": {
+        "w_stat": 4376.0,
+        "p_value": 3.603914602238361e-14
+      },
+      "cohens_d_dice": 0.8413784001048745,
+      "t_test_iou": {
+        "t_stat": 9.72352980567484,
+        "p_value": 5.30185159098797e-16
+      },
+      "wilcoxon_iou": {
+        "w_stat": 4418.0,
+        "p_value": 1.1073177071670657e-14
+      },
+      "cohens_d_iou": 0.9822248371001047,
+      "holm_bonferroni_dice": {
+        "rank": 3,
+        "p_value": 3.603914602238361e-14,
+        "alpha_adjusted": 0.05,
+        "statistically_significant": true
+      }
+    },
+    "UNet++": {
+      "t_test_dice": {
+        "t_stat": 11.510103178379268,
+        "p_value": 7.685138725343297e-20
+      },
+      "wilcoxon_dice": {
+        "w_stat": 4511.0,
+        "p_value": 7.474785689744215e-16
+      },
+      "cohens_d_dice": 1.1626960009051324,
+      "t_test_iou": {
+        "t_stat": 13.438766245776321,
+        "p_value": 7.095970784015981e-24
+      },
+      "wilcoxon_iou": {
+        "w_stat": 4558.0,
+        "p_value": 1.8330147007756445e-16
+      },
+      "cohens_d_iou": 1.357520391324631,
+      "holm_bonferroni_dice": {
+        "rank": 1,
+        "p_value": 7.474785689744215e-16,
+        "alpha_adjusted": 0.016666666666666666,
+        "statistically_significant": true
+      }
+    },
+    "RepSegNet (V1)": {
+      "t_test_dice": {
+        "t_stat": 9.986994344519049,
+        "p_value": 1.4302329591382261e-16
+      },
+      "wilcoxon_dice": {
+        "w_stat": 4357.0,
+        "p_value": 6.313998543154655e-15
+      },
+      "cohens_d_dice": 1.0088387744626532,
+      "t_test_iou": {
+        "t_stat": 11.354319552443972,
+        "p_value": 1.6503799891025604e-19
+      },
+      "wilcoxon_iou": {
+        "w_stat": 4390.0,
+        "p_value": 2.4004017795575155e-15
+      },
+      "cohens_d_iou": 1.1469594782113728,
+      "holm_bonferroni_dice": {
+        "rank": 2,
+        "p_value": 6.313998543154655e-15,
+        "alpha_adjusted": 0.025,
+        "statistically_significant": true
+      }
+    }
+  }
+}

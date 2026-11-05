@@ -15,7 +15,7 @@ import torch.nn.functional as F
 
 # ── Building block ────────────────────────────────────────────────────────────
 class ConvBlock(nn.Module):
-    """Two 3×3 Conv → BN → ReLU."""
+    """Two 3×3 Conv → BN → ReLU + Dropout."""
     def __init__(self, in_ch: int, out_ch: int):
         super().__init__()
         self.block = nn.Sequential(
@@ -25,6 +25,7 @@ class ConvBlock(nn.Module):
             nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
+            nn.Dropout2d(0.2),
         )
 
     def forward(self, x):

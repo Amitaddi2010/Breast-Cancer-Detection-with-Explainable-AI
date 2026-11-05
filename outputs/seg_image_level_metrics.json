@@ -1,0 +1,34 @@
+{
+  "U-Net": {
+    "success_all": 52,
+    "success_benign": 37,
+    "success_malignant": 15,
+    "total_all": 98,
+    "total_benign": 66,
+    "total_malignant": 32
+  },
+  "UNet++": {
+    "success_all": 34,
+    "success_benign": 24,
+    "success_malignant": 10,
+    "total_all": 98,
+    "total_benign": 66,
+    "total_malignant": 32
+  },
+  "RepSegNet": {
+    "success_all": 48,
+    "success_benign": 36,
+    "success_malignant": 12,
+    "total_all": 98,
+    "total_benign": 66,
+    "total_malignant": 32
+  },
+  "RepSegNet V2 (Ours)": {
+    "success_all": 81,
+    "success_benign": 55,
+    "success_malignant": 26,
+    "total_all": 98,
+    "total_benign": 66,
+    "total_malignant": 32
+  }
+}

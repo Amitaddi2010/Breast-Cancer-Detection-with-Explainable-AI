@@ -41,11 +41,12 @@ class Down(nn.Module):
 
 
 class Up(nn.Module):
-    """Decoder block: Transposed conv upsample + skip concat + DoubleConv."""
+    """Decoder block: Transposed conv upsample + skip concat + DoubleConv + Dropout."""
     def __init__(self, in_ch: int, out_ch: int):
         super().__init__()
         self.up   = nn.ConvTranspose2d(in_ch, in_ch // 2, kernel_size=2, stride=2)
         self.conv = DoubleConv(in_ch, out_ch)
+        self.drop = nn.Dropout2d(0.2)
 
     def forward(self, x, skip):
         x = self.up(x)
@@ -53,7 +54,7 @@ class Up(nn.Module):
         if x.shape != skip.shape:
             x = F.interpolate(x, size=skip.shape[2:], mode='bilinear', align_corners=True)
         x = torch.cat([skip, x], dim=1)
-        return self.conv(x)
+        return self.drop(self.conv(x))
 
 
 # ── U-Net ─────────────────────────────────────────────────────────────────────

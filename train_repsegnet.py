@@ -3,8 +3,8 @@ import time
 import json
 import torch
 import torch.nn as nn
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import matplotlib.pyplot as plt
 
 from config import (
@@ -13,7 +13,7 @@ from config import (
 )
 from seg_dataset import get_seg_dataloaders
 from repsegnet import get_repsegnet
-from train_segmentation import DiceBCELoss, dice_coefficient, iou_score, run_epoch, plot_dual_curves
+from train_segmentation import CompoundLoss, dice_coefficient, iou_score, run_epoch, plot_dual_curves
 
 def train_repsegnet(epochs=NUM_EPOCHS):
     print(f"\n{'='*60}")
@@ -37,9 +37,14 @@ def train_repsegnet(epochs=NUM_EPOCHS):
     checkpoint_path = REPSEGNET_CHECKPOINT
     is_unetpp = False
 
-    criterion = DiceBCELoss()
-    optimizer = Adam(repsegnet.parameters(), lr=LEARNING_RATE)
-    scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
+    criterion = CompoundLoss()
+    optimizer = AdamW(repsegnet.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
+    # Warmup for 5 epochs then cosine annealing
+    warmup_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=5)
+    cosine_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
+    scheduler = torch.optim.lr_scheduler.SequentialLR(
+        optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[5]
+    )
 
     history    = {'train_loss': [], 'val_loss': [],
                   'train_dice': [], 'val_dice': []}
@@ -58,7 +63,7 @@ def train_repsegnet(epochs=NUM_EPOCHS):
         va_loss, va_dice, va_iou = run_epoch(
             repsegnet, val_l, criterion, None, DEVICE,
             is_unetpp=is_unetpp, train=False)
-        scheduler.step(va_dice)
+        scheduler.step()
 
         history['train_loss'].append(tr_loss)
         history['val_loss'].append(va_loss)

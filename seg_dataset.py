@@ -32,12 +32,20 @@ IMG_RE     = re.compile(r'_mask', re.IGNORECASE)
 def get_seg_train_transform():
     return A.Compose([
         A.Resize(SEG_IMG_SIZE, SEG_IMG_SIZE),
+        # Spatial augmentations
         A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.2),
-        A.Rotate(limit=20, p=0.5),
-        A.RandomBrightnessContrast(p=0.4),
-        A.ElasticTransform(p=0.3),
-        A.Normalize(mean=[0.0, 0.0, 0.0], std=[1.0, 1.0, 1.0]),  # [0,1] per paper
+        A.VerticalFlip(p=0.5),
+        A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.15, rotate_limit=30, p=0.6),
+        A.ElasticTransform(alpha=120, sigma=120 * 0.05, p=0.3),
+        A.GridDistortion(num_steps=5, distort_limit=0.3, p=0.3),
+        # Intensity augmentations (ultrasound-specific)
+        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+        A.CLAHE(clip_limit=4.0, tile_grid_size=(8, 8), p=0.4),
+        A.GaussNoise(p=0.3),
+        A.RandomGamma(gamma_limit=(80, 120), p=0.3),
+        # Regularization
+        A.CoarseDropout(max_holes=8, max_height=16, max_width=16, fill_value=0, p=0.3),
+        A.Normalize(mean=[0.0, 0.0, 0.0], std=[1.0, 1.0, 1.0]),  # [0,1]
         ToTensorV2(),
     ], additional_targets={"mask": "mask"})
 

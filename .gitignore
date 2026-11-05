@@ -31,8 +31,14 @@ env/
 *.swp
 *.swo
 
-# Project specific
+# Project specific – large binary / dataset files
 Dataset_BUSI_with_GT/
-outputs/*.png
-outputs/*.json
+UDIAT-Dataset/
+archive*.zip
+*.pth
+dummy_test.png
 .gemini/
+
+# Allow key output artefacts (metrics JSON + figures PNG)
+!outputs/*.json
+!outputs/*.png

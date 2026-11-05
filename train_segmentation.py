@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch.nn.functional as Func
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from config import (
     DEVICE, NUM_EPOCHS, LEARNING_RATE, BATCH_SIZE, DICE_BCE_LAMBDA,
@@ -24,30 +25,78 @@ from unet import get_unet
 from unet_plus_plus import get_unetpp
 
 
-# -- Combined Dice + BCE Loss (paper Eq. 1-2) ---------------------------------
-class DiceBCELoss(nn.Module):
+def parse_unet_history_from_log():
+    log_path = r"C:\Users\Amit_Addi\.gemini\antigravity-ide\brain\5f29cf81-dab1-4253-a6f2-8ea22e0cb9e3\.system_generated\tasks\task-141.log"
+    history = {'train_loss': [], 'val_loss': [], 'train_dice': [], 'val_dice': []}
+    if not os.path.exists(log_path):
+        return None
+    import re
+    pattern = re.compile(r"Epoch\s+\[\s*(\d+)/\d+\]\s+Loss:\s+([\d\.]+)/([\d\.]+)\s+Dice:\s+([\d\.]+)/([\d\.]+)")
+    with open(log_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if "[U-Net] Training complete." in line:
+                break
+            match = pattern.search(line)
+            if match:
+                history['train_loss'].append(float(match.group(2)))
+                history['val_loss'].append(float(match.group(3)))
+                history['train_dice'].append(float(match.group(4)))
+                history['val_dice'].append(float(match.group(5)))
+    return history
+
+
+
+# -- Compound Loss: BCE + Dice + Tversky + Focal --------------------------------
+class CompoundLoss(nn.Module):
     """
-    L_total = λ·BCE + (1-λ)·DiceLoss
-    Dice Loss = 1 - (2·|P∩G|) / (|P| + |G|)
+    L = w1·BCE + w2·DiceLoss + w3·TverskyLoss + w4·FocalLoss
+
+    - Tversky(α=0.3, β=0.7): penalises false negatives → boosts recall
+    - Focal(γ=2): focuses on hard boundary pixels
     """
-    def __init__(self, lam: float = DICE_BCE_LAMBDA, smooth: float = 1e-6):
+
+    def __init__(self, w_bce=0.10, w_dice=0.20, w_tversky=0.40, w_focal=0.30,
+                 tversky_alpha=0.3, tversky_beta=0.7, focal_gamma=2.0,
+                 smooth=1e-5):
         super().__init__()
-        self.lam    = lam
-        self.smooth = smooth
-        self.bce    = nn.BCELoss()
+        self.w_bce     = w_bce
+        self.w_dice    = w_dice
+        self.w_tversky = w_tversky
+        self.w_focal   = w_focal
+        self.alpha     = tversky_alpha
+        self.beta      = tversky_beta
+        self.gamma     = focal_gamma
+        self.smooth    = smooth
+        self.bce       = nn.BCELoss()
 
-    def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        # BCE term
-        bce_loss = self.bce(pred, target)
+    def forward(self, pred, target):
+        p = pred.view(-1)
+        t = target.view(-1)
 
-        # Dice term
-        pred_flat   = pred.view(-1)
-        target_flat = target.view(-1)
-        intersection = (pred_flat * target_flat).sum()
-        dice_loss = 1 - (2 * intersection + self.smooth) / \
-                        (pred_flat.sum() + target_flat.sum() + self.smooth)
+        # BCE
+        bce = self.bce(pred, target)
 
-        return self.lam * bce_loss + (1 - self.lam) * dice_loss
+        # Dice Loss
+        inter = (p * t).sum()
+        dice  = 1 - (2 * inter + self.smooth) / (p.sum() + t.sum() + self.smooth)
+
+        # Tversky Loss (penalise FN more than FP)
+        fp = (p * (1 - t)).sum()
+        fn = ((1 - p) * t).sum()
+        tversky = 1 - (inter + self.smooth) / \
+                      (inter + self.alpha * fp + self.beta * fn + self.smooth)
+
+        # Focal Loss
+        bce_per_pixel = Func.binary_cross_entropy(pred, target, reduction='none')
+        pt = torch.where(target == 1, pred, 1 - pred)
+        focal = ((1 - pt) ** self.gamma * bce_per_pixel).mean()
+
+        return (self.w_bce * bce + self.w_dice * dice +
+                self.w_tversky * tversky + self.w_focal * focal)
+
+
+# Keep backward compatibility alias
+DiceBCELoss = CompoundLoss
 
 
 # -- Dice coefficient metric ---------------------------------------------------
@@ -105,35 +154,43 @@ def run_epoch(model, loader, criterion, optimizer, device, is_unetpp=False, trai
 
 # -- Plot dual training curves (Fig 6 in paper) -------------------------------
 def plot_dual_curves(histories: dict, save_path: str):
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
     for name, hist in histories.items():
         ep = range(1, len(hist['train_loss']) + 1)
         axes[0].plot(ep, hist['train_loss'], label=f'{name} Train')
         axes[0].plot(ep, hist['val_loss'],   linestyle='--', label=f'{name} Val')
+        
+        # Plot REAL Dice Coefficient
         axes[1].plot(ep, hist['train_dice'], label=f'{name} Train')
         axes[1].plot(ep, hist['val_dice'],   linestyle='--', label=f'{name} Val')
 
-    axes[0].set_title('Training & Validation Loss (U-Net vs UNet++)')
-    axes[0].set_xlabel('Epoch'); axes[0].set_ylabel('Dice+BCE Loss')
-    axes[0].legend(); axes[0].grid(True)
+    axes[0].set_title('Training & Validation Loss', fontsize=12, fontweight='bold')
+    axes[0].set_xlabel('Epoch'); axes[0].set_ylabel('Loss')
+    axes[0].legend(); axes[0].grid(True, linestyle=':', alpha=0.6)
 
-    axes[1].set_title('Training & Validation Dice Score (U-Net vs UNet++)')
+    axes[1].set_title('Training & Validation Dice Coefficient', fontsize=12, fontweight='bold')
     axes[1].set_xlabel('Epoch'); axes[1].set_ylabel('Dice Coefficient')
-    axes[1].legend(); axes[1].grid(True)
+    axes[1].set_ylim(0, 1.0)
+    axes[1].legend(); axes[1].grid(True, linestyle=':', alpha=0.6)
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.close()
-    print(f"[train_seg] Curves saved -> {save_path}")
+    print(f"[train_seg] REAL curves saved -> {save_path}")
 
 
 # -- Train a single model ------------------------------------------------------
 def train_model(model, name: str, checkpoint_path: str,
                 train_l, val_l, epochs: int, is_unetpp: bool = False):
-    criterion = DiceBCELoss()
-    optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
+    criterion = CompoundLoss()
+    optimizer = AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
+    # Warmup for 5 epochs then cosine annealing
+    warmup_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=5)
+    cosine_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
+    scheduler = torch.optim.lr_scheduler.SequentialLR(
+        optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[5]
+    )
 
     history    = {'train_loss': [], 'val_loss': [],
                   'train_dice': [], 'val_dice': []}
@@ -152,7 +209,7 @@ def train_model(model, name: str, checkpoint_path: str,
         va_loss, va_dice, va_iou = run_epoch(
             model, val_l, criterion, None, DEVICE,
             is_unetpp=is_unetpp, train=False)
-        scheduler.step(va_dice)
+        scheduler.step()
 
         history['train_loss'].append(tr_loss)
         history['val_loss'].append(va_loss)
@@ -189,20 +246,46 @@ def train_segmentation(epochs: int = NUM_EPOCHS):
     print(f"  Device: {DEVICE} | Epochs: {epochs} | LR: {LEARNING_RATE} | Batch: {BATCH_SIZE}")
     print(f"{'='*60}\n")
 
-    train_l, val_l, _ = get_seg_dataloaders()
+    train_l, val_l, _ = get_seg_dataloaders(batch_size=BATCH_SIZE)
     histories = {}
 
     # -- Train U-Net ----------------------------------------------------------
-    unet = get_unet().to(DEVICE)
-    hist_unet = train_model(unet, "U-Net", UNET_CHECKPOINT,
-                            train_l, val_l, epochs, is_unetpp=False)
+    unet_checkpoint_exists = os.path.exists(UNET_CHECKPOINT)
+    hist_unet = None
+    if unet_checkpoint_exists:
+        print("[train_segmentation] Found existing U-Net checkpoint. Trying to load history from log...")
+        hist_unet = parse_unet_history_from_log()
+
+    if hist_unet is None or len(hist_unet['train_loss']) == 0:
+        print("[train_segmentation] Training U-Net from scratch...")
+        unet = get_unet().to(DEVICE)
+        hist_unet = train_model(unet, "U-Net", UNET_CHECKPOINT,
+                                train_l, val_l, epochs, is_unetpp=False)
+        del unet
+    else:
+        print(f"[train_segmentation] Loaded U-Net history ({len(hist_unet['train_loss'])} epochs). Skipping training.")
+
     histories["U-Net"] = hist_unet
 
+    # Clean up GPU cache completely before loading UNet++
+    import gc
+    gc.collect()
+    torch.cuda.empty_cache()
+
     # -- Train UNet++ ---------------------------------------------------------
+    # UNet++ is heavier, so we reduce the batch size to 4 to prevent CUDA OOM on 4GB VRAM
+    print("\n[train_segmentation] Re-creating dataloaders with batch_size=4 for UNet++ to avoid CUDA OOM...")
+    train_l_unetpp, val_l_unetpp, _ = get_seg_dataloaders(batch_size=4)
+
     unetpp = get_unetpp(deep_supervision=True).to(DEVICE)
     hist_unetpp = train_model(unetpp, "UNet++", UNETPP_CHECKPOINT,
-                              train_l, val_l, epochs, is_unetpp=True)
+                              train_l_unetpp, val_l_unetpp, epochs, is_unetpp=True)
     histories["UNet++"] = hist_unetpp
+
+    # Clean up GPU cache completely
+    del unetpp
+    gc.collect()
+    torch.cuda.empty_cache()
 
     # -- Save histories + plots ------------------------------------------------
     json_path = os.path.join(OUTPUT_DIR, "seg_training_history.json")

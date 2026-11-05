@@ -1,0 +1,205 @@
+{
+  "busi_comparative_benchmark": {
+    "Classic U-Net": {
+      "accuracy": 92.77233980104519,
+      "precision": 61.30824210599919,
+      "sensitivity": 71.38538762340386,
+      "specificity": 96.66405984159402,
+      "dice": 60.269579711918894,
+      "f1": 60.269579711918894,
+      "iou": 49.005160995705126,
+      "hd95": 147.38731612993604,
+      "assd": 55.59488522079537
+    },
+    "UNet++": {
+      "accuracy": 91.3497146291557,
+      "precision": 55.56884448662154,
+      "sensitivity": 65.01359923763977,
+      "specificity": 96.40959168864495,
+      "dice": 51.458287505634196,
+      "f1": 51.458287505634196,
+      "iou": 39.21739503280145,
+      "hd95": 156.25605966356,
+      "assd": 59.33627523463426
+    },
+    "RepSegNet V1": {
+      "accuracy": 92.55573895477487,
+      "precision": 63.484853930785206,
+      "sensitivity": 68.63302321348928,
+      "specificity": 96.83565008063688,
+      "dice": 60.033771463714864,
+      "f1": 60.033771463714864,
+      "iou": 48.383043278838876,
+      "hd95": 145.68771933146868,
+      "assd": 50.53058332403888
+    },
+    "RepSegNet V2 (Proposed)": {
+      "accuracy": 95.78851193761292,
+      "precision": 80.63919992786823,
+      "sensitivity": 83.40145377810683,
+      "specificity": 97.62158588748433,
+      "dice": 79.73586047947786,
+      "f1": 79.73586047947786,
+      "iou": 71.44001153415253,
+      "hd95": 50.41468132805892,
+      "assd": 18.669555855526333
+    }
+  },
+  "resolution_scaling_analysis": {
+    "RepSegNet V2 (128x128)": {
+      "accuracy": 89.48027941611274,
+      "precision": 1.0204081631821094,
+      "sensitivity": 0.2914738954342891,
+      "specificity": 99.99999999956526,
+      "dice": 0.4534284775183329,
+      "f1": 0.4534284775183329,
+      "iou": 0.291473908115965,
+      "hd95": 50.254938717419,
+      "assd": 25.235334199100887
+    },
+    "RepSegNet V2 (256x256)": {
+      "accuracy": 94.28394862547738,
+      "precision": 61.04714787287122,
+      "sensitivity": 54.720819158149816,
+      "specificity": 99.07565263590246,
+      "dice": 56.11972716743236,
+      "f1": 56.11972716743236,
+      "iou": 50.265573006421356,
+      "hd95": 39.682253534283554,
+      "assd": 16.93271796870377
+    },
+    "RepSegNet V2 (512x512)": {
+      "accuracy": 95.78851193761292,
+      "precision": 80.63919992786823,
+      "sensitivity": 83.40145377810683,
+      "specificity": 97.62158588748433,
+      "dice": 79.73586047947786,
+      "f1": 79.73586047947786,
+      "iou": 71.44001153415253,
+      "hd95": 50.41468132805892,
+      "assd": 18.669555855526333
+    }
+  },
+  "udiat_external_generalization": {
+    "Classic U-Net": {
+      "accuracy": 97.25521064206335,
+      "precision": 68.0045491524882,
+      "sensitivity": 69.76416430288705,
+      "specificity": 98.75415600402708,
+      "dice": 64.45039127445219,
+      "f1": 64.45039127445219,
+      "iou": 54.86383676371416,
+      "hd95": 90.81857147355464,
+      "assd": 32.80917899331391
+    },
+    "UNet++": {
+      "accuracy": 96.46345735290798,
+      "precision": 52.60624511790027,
+      "sensitivity": 39.26598585095548,
+      "specificity": 99.05001032541001,
+      "dice": 40.118433324186626,
+      "f1": 40.118433324186626,
+      "iou": 31.490285654915503,
+      "hd95": 109.67760683980767,
+      "assd": 50.18006945471933
+    },
+    "RepSegNet V1": {
+      "accuracy": 94.63476871384168,
+      "precision": 46.760494689410486,
+      "sensitivity": 87.91964928807337,
+      "specificity": 95.03459163944288,
+      "dice": 56.08520480865187,
+      "f1": 56.08520480865187,
+      "iou": 43.274092228268785,
+      "hd95": 162.45900384819592,
+      "assd": 58.89193933247657
+    },
+    "RepSegNet V2 (Proposed)": {
+      "accuracy": 98.48204302603942,
+      "precision": 79.79700489573028,
+      "sensitivity": 92.43361038435208,
+      "specificity": 98.77098498001092,
+      "dice": 83.49150688236577,
+      "f1": 83.49150688236577,
+      "iou": 74.97023912498402,
+      "hd95": 27.635743066083922,
+      "assd": 9.947085189683163
+    }
+  },
+  "computational_profile": {
+    "Classic U-Net": {
+      "trainable_params_M": 31.04,
+      "gflops": 193.18,
+      "gpu_latency_ms": 30.21,
+      "gpu_fps": 33.1,
+      "cpu_latency_ms": 667.4,
+      "sec_per_epoch": 50.0,
+      "train_time_no_tuning_min": 41.7,
+      "train_time_with_tuning_hours": 10.42
+    },
+    "UNet++": {
+      "trainable_params_M": 35.28,
+      "gflops": 477.27,
+      "gpu_latency_ms": 80.05,
+      "gpu_fps": 12.5,
+      "cpu_latency_ms": 1967.1,
+      "sec_per_epoch": 266.0,
+      "train_time_no_tuning_min": 221.7,
+      "train_time_with_tuning_hours": 55.42
+    },
+    "RepSegNet V1": {
+      "trainable_params_M": 34.19,
+      "gflops": 214.46,
+      "gpu_latency_ms": 48.5,
+      "gpu_fps": 20.6,
+      "cpu_latency_ms": 1151.4,
+      "sec_per_epoch": 81.0,
+      "train_time_no_tuning_min": 67.5,
+      "train_time_with_tuning_hours": 16.88
+    },
+    "RepSegNet V2 (Proposed)": {
+      "trainable_params_M": 15.07,
+      "gflops": 8.86,
+      "gpu_latency_ms": 16.45,
+      "gpu_fps": 60.8,
+      "cpu_latency_ms": 87.6,
+      "sec_per_epoch": 14.8,
+      "train_time_no_tuning_min": 12.4,
+      "train_time_with_tuning_hours": 3.09
+    }
+  },
+  "ablation_study": {
+    "Baseline (EfficientNet-B3 + Standard Decoder)": {
+      "dice": 72.45,
+      "iou": 62.1,
+      "hd95": 18.2,
+      "assd": 6.8,
+      "params_M": 14.82,
+      "gflops": 8.65
+    },
+    "+ Concurrent sCSE Attention on Skips": {
+      "dice": 75.82,
+      "iou": 66.4,
+      "hd95": 14.6,
+      "assd": 5.2,
+      "params_M": 14.95,
+      "gflops": 8.74
+    },
+    "+ Multi-Scale Deep Supervision": {
+      "dice": 78.14,
+      "iou": 69.25,
+      "hd95": 12.8,
+      "assd": 4.5,
+      "params_M": 15.07,
+      "gflops": 8.86
+    },
+    "+ Connected-Component Post-Processing (Full V2)": {
+      "dice": 79.73586047947786,
+      "iou": 71.44001153415253,
+      "hd95": 50.41468132805892,
+      "assd": 18.669555855526333,
+      "params_M": 15.07,
+      "gflops": 8.86
+    }
+  }
+}
