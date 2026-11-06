@@ -1,7 +1,7 @@
 """
 seg_dataset.py — Segmentation Dataset for U-Net / UNet++ training.
 Loads (image, binary_mask) pairs from benign + malignant folders.
-Preprocessing aligned with paper Section 3.2: resize 128×128, normalize [0,1].
+Preprocessing aligned with paper Section 3.2: resize 512×512, normalize [0,1].
 """
 
 import os

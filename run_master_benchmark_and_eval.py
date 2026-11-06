@@ -237,26 +237,49 @@ def main():
     with open('outputs/computational_complexity_metrics.json') as f:
         comp_metrics = json.load(f)
 
-    # 6. Real Ablation Breakdown (Rows A-C are estimated, Row D is measured)
+    # 6. Real Empirical Ablation Breakdown (Evaluated directly from real trained checkpoints)
+    print("\n[6/6] Evaluating Real Empirical Ablation Variants...", flush=True)
+    ablation_base_path = os.path.join(OUTPUT_DIR, 'ablation_baseline.pth')
+    ablation_scse_path = os.path.join(OUTPUT_DIR, 'ablation_scse.pth')
+
+    m_base = get_repsegnet_v2(encoder_name=SEG_ENCODER_NAME, deep_supervision=False, use_scse=False).to(DEVICE)
+    m_base.load_state_dict(torch.load(ablation_base_path, map_location=DEVICE))
+    res_base = evaluate_loader(m_base, test_loader, DEVICE, 512, use_postprocess=False)
+
+    m_scse = get_repsegnet_v2(encoder_name=SEG_ENCODER_NAME, deep_supervision=False, use_scse=True).to(DEVICE)
+    m_scse.load_state_dict(torch.load(ablation_scse_path, map_location=DEVICE))
+    res_scse = evaluate_loader(m_scse, test_loader, DEVICE, 512, use_postprocess=False)
+
+    # Variant C is RepSegNet V2 before postprocessing
+    res_deepsup = evaluate_loader(m_rep2, test_loader, DEVICE, 512, use_postprocess=False)
+
+    # Variant D is RepSegNet V2 with postprocessing
+    res_full_v2 = busi_results['RepSegNet V2 (Proposed)']
+
+    dummy_input = torch.randn(1, 3, 512, 512).to(DEVICE)
+    f_b, p_b = profile(m_base, inputs=(dummy_input,), verbose=False)
+    f_s, p_s = profile(m_scse, inputs=(dummy_input,), verbose=False)
+    f_v, p_v = profile(m_rep2, inputs=(dummy_input,), verbose=False)
+
     ablation_study = {
         'Baseline (EfficientNet-B3 + Standard Decoder)': {
-            'dice': 72.45, 'iou': 62.10, 'hd95': 18.2, 'assd': 6.8, 'params_M': 14.82, 'gflops': 8.65,
-            'estimated': True
+            'dice': res_base['dice'], 'iou': res_base['iou'], 'hd95': res_base['hd95'], 'assd': res_base['assd'],
+            'params_M': round(p_b / 1e6, 2), 'gflops': round(f_b / 1e9, 2),
+            'estimated': False
         },
         '+ Concurrent sCSE Attention on Skips': {
-            'dice': 75.82, 'iou': 66.40, 'hd95': 14.6, 'assd': 5.2, 'params_M': 14.95, 'gflops': 8.74,
-            'estimated': True
+            'dice': res_scse['dice'], 'iou': res_scse['iou'], 'hd95': res_scse['hd95'], 'assd': res_scse['assd'],
+            'params_M': round(p_s / 1e6, 2), 'gflops': round(f_s / 1e9, 2),
+            'estimated': False
         },
         '+ Multi-Scale Deep Supervision': {
-            'dice': 78.14, 'iou': 69.25, 'hd95': 12.8, 'assd': 4.5, 'params_M': 15.07, 'gflops': 8.86,
-            'estimated': True
+            'dice': res_deepsup['dice'], 'iou': res_deepsup['iou'], 'hd95': res_deepsup['hd95'], 'assd': res_deepsup['assd'],
+            'params_M': round(p_v / 1e6, 2), 'gflops': round(f_v / 1e9, 2),
+            'estimated': False
         },
         '+ Connected-Component Post-Processing (Full V2)': {
-            'dice': busi_results['RepSegNet V2 (Proposed)']['dice'],
-            'iou': busi_results['RepSegNet V2 (Proposed)']['iou'],
-            'hd95': busi_results['RepSegNet V2 (Proposed)']['hd95'],
-            'assd': busi_results['RepSegNet V2 (Proposed)']['assd'],
-            'params_M': 15.07, 'gflops': 8.86,
+            'dice': res_full_v2['dice'], 'iou': res_full_v2['iou'], 'hd95': res_full_v2['hd95'], 'assd': res_full_v2['assd'],
+            'params_M': round(p_v / 1e6, 2), 'gflops': round(f_v / 1e9, 2),
             'estimated': False
         }
     }

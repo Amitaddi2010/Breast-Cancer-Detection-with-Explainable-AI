@@ -135,12 +135,8 @@ def train_repsegnet_v2(epochs=NUM_EPOCHS, quick_test=False):
             train=False, deep_supervision=False
         )
         
-        # Scheduler step (ensure warmup/cosine behaves correctly)
-        if epoch <= 5:
-            # sequentially handles warmup
-            scheduler.step()
-        else:
-            scheduler.step()
+        # Scheduler step (SequentialLR automatically transitions from LinearLR to CosineAnnealingWarmRestarts at milestone)
+        scheduler.step()
 
         history['train_loss'].append(tr_loss)
         history['val_loss'].append(va_loss)

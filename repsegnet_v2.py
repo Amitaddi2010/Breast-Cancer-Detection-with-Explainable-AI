@@ -62,12 +62,12 @@ class SCSE(nn.Module):
 # ── Decoder Block ─────────────────────────────────────────────────────────────
 class DecoderBlock(nn.Module):
     """
-    Decoder block: Upsample → Concat skip → Conv-BN-ReLU × 2 → SCSE → Dropout
+    Decoder block: Upsample → Concat skip → Conv-BN-ReLU × 2 → (Optional SCSE) → Dropout
     """
-    def __init__(self, in_channels, skip_channels, out_channels, dropout=0.1):
+    def __init__(self, in_channels, skip_channels, out_channels, dropout=0.1, use_scse=True):
         super().__init__()
         self.upsample = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2)
-        self.scse_skip = SCSE(skip_channels)  # Attention on skip connection
+        self.scse_skip = SCSE(skip_channels) if use_scse else nn.Identity()
 
         cat_channels = in_channels + skip_channels
         self.conv1 = nn.Sequential(
@@ -80,7 +80,7 @@ class DecoderBlock(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )
-        self.scse_out = SCSE(out_channels)
+        self.scse_out = SCSE(out_channels) if use_scse else nn.Identity()
         self.dropout = nn.Dropout2d(dropout) if dropout > 0 else nn.Identity()
 
     def forward(self, x, skip):
@@ -119,9 +119,10 @@ class RepSegNetV2(nn.Module):
     """
     def __init__(self, encoder_name='efficientnet_b3', in_channels=3,
                  out_channels=1, decoder_channels=(256, 128, 64, 32, 16),
-                 dropout=0.1, deep_supervision=True):
+                 dropout=0.1, deep_supervision=True, use_scse=True):
         super().__init__()
         self.deep_supervision = deep_supervision
+        self.use_scse = use_scse
 
         # ── Pretrained Encoder ──
         self.encoder = timm.create_model(
@@ -158,7 +159,7 @@ class RepSegNetV2(nn.Module):
             else:
                 in_ch = prev_channels
             self.decoder_blocks.append(
-                DecoderBlock(in_ch, skip_ch, out_ch, dropout=dropout)
+                DecoderBlock(in_ch, skip_ch, out_ch, dropout=dropout, use_scse=use_scse)
             )
             prev_channels = out_ch
 
@@ -218,14 +219,16 @@ class RepSegNetV2(nn.Module):
 
 
 def get_repsegnet_v2(encoder_name='efficientnet_b3', in_channels=3,
-                     out_channels=1, deep_supervision=True, dropout=0.1):
+                     out_channels=1, deep_supervision=True, dropout=0.1,
+                     use_scse=True):
     """Factory function for RepSegNet V2."""
     return RepSegNetV2(
         encoder_name=encoder_name,
         in_channels=in_channels,
         out_channels=out_channels,
         deep_supervision=deep_supervision,
-        dropout=dropout
+        dropout=dropout,
+        use_scse=use_scse
     )
 
 
