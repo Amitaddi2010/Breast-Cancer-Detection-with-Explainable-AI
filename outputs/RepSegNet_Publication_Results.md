@@ -14,10 +14,10 @@ RepSegNet is a highly optimized, lightweight segmentation network designed speci
 2. **Efficient Channel Attention (ECA):** An ultra-lightweight attention mechanism is embedded into every encoder and decoder block. Unlike traditional Squeeze-and-Excitation (SE) networks which rely on dimensionality reduction via MLPs (losing cross-channel relationships), ECA employs a sleek 1D convolution to capture local cross-channel interaction, highlighting the most critical feature map channels corresponding to the Region of Interest (ROI) with minimal overhead.
 
 **Model Size Comparison:**
-- U-Net Baseline: ~31M parameters
-- UNet++ (Deep Supervision): ~35M parameters 
-- **RepSegNet (V1): ~8.5M parameters (75% smaller footprint)**
-- **RepSegNet V2 (Ours): ~8.2M parameters (Pretrained EfficientNet-B0 + SCSE Skip Attention, ~76% smaller footprint)**
+- U-Net Baseline: ~31.0M parameters
+- UNet++ (Deep Supervision): ~35.3M parameters 
+- **RepSegNet (V1): ~34.2M parameters**
+- **RepSegNet V2 (Ours): ~15.1M parameters (Pretrained EfficientNet-B3 + SCSE Skip Attention, ~57% smaller footprint than UNet++)**
 
 ## Training Protocol
 

@@ -82,9 +82,9 @@ $$L_{Focal} = -\frac{1}{N} \sum_{i=1}^N (1 - p_t)^\gamma \log(p_t)$$
 | Model | Parameters | Test Accuracy | Test Precision | Test Recall | Test Dice | Test IoU |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Classic U-Net** | ~31.0M | 93.35% | 68.53% | 65.83% | 62.08% | 51.85% |
-| **UNet++** | ~35.0M | 91.86% | 63.09% | 56.23% | 51.41% | 40.43% |
-| **RepSegNet V1** | ~8.5M | 92.86% | 70.21% | 63.62% | 60.63% | 50.02% |
-| **RepSegNet V2 (Ours)** | **~15.0M** | **95.60%** | **79.07%** | **85.08%** | **79.93%** | **71.45%** |
+| **UNet++** | ~35.3M | 91.86% | 63.09% | 56.23% | 51.41% | 40.43% |
+| **RepSegNet V1** | ~34.2M | 92.86% | 70.21% | 63.62% | 60.63% | 50.02% |
+| **RepSegNet V2 (Ours)** | **~15.1M** | **95.60%** | **79.07%** | **85.08%** | **79.93%** | **71.45%** |
 
 ### 3.1 SOTA Literature Comparison
 
@@ -94,7 +94,7 @@ To contextualize the performance of **RepSegNet V2**, we compare our results wit
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Lu et al. (2025)** | MTL-OCA | OASBUD (BUSI) | 91.67% | 72.03% | 83.75% | Very High | Yes |
 | **Bruno et al. (2025)** | DeepLabV3+ (MobileNetV3) | BUSI | 95.20% (Cls) | 62.50% | 76.90% | Medium | No |
-| **Proposed work (Ours)** | **RepSegNet V2** | **BUSI** | **95.60%** | **71.45%** | **79.93%** | **Low (~8.5M - 15.0M)** | **Yes** |
+| **Proposed work (Ours)** | **RepSegNet V2** | **BUSI** | **95.60%** | **71.45%** | **79.93%** | **Low (15.1M)** | **Yes** |
 
 ### 3.2 Mathematical Relationship & Clinical Protocol Analysis
 
