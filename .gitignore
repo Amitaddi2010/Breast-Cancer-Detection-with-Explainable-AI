@@ -38,6 +38,8 @@ archive*.zip
 *.pth
 dummy_test.png
 .gemini/
+.agents/
+skills-lock.json
 
 # Allow key output artefacts (metrics JSON + figures PNG)
 !outputs/*.json

@@ -28,10 +28,6 @@ LEARNING_RATE = 3e-4  # tuned for AdamW + cosine warmup
 NUM_EPOCHS    = 100   # extended for cosine annealing convergence
 EARLY_STOP_PATIENCE = 20
 
-# Dice + BCE combined loss weight factor λ (paper Eq. 1)
-# L = λ·BCE + (1-λ)·Dice
-DICE_BCE_LAMBDA = 0.5
-
 # ─── Data Splits ─────────────────────────────────────────────────────────────
 TRAIN_RATIO   = 0.70
 VAL_RATIO     = 0.15

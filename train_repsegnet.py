@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import matplotlib.pyplot as plt
 
 from config import (
-    DEVICE, NUM_EPOCHS, LEARNING_RATE, BATCH_SIZE, DICE_BCE_LAMBDA,
+    DEVICE, NUM_EPOCHS, LEARNING_RATE, BATCH_SIZE,
     EARLY_STOP_PATIENCE, REPSEGNET_CHECKPOINT, OUTPUT_DIR
 )
 from seg_dataset import get_seg_dataloaders

@@ -2,7 +2,7 @@
 repsegnet_v2.py — RepSegNet V2: Pretrained Encoder + SCSE Attention + Deep Supervision
 
 Key improvements over V1:
-  1. Pretrained EfficientNet-B0 encoder (ImageNet features → far better on small datasets)
+  1. Pretrained EfficientNet-B3 encoder (ImageNet features → far better on small datasets)
   2. SCSE (Spatial + Channel Squeeze-Excitation) on skip connections
   3. Deep supervision with auxiliary heads at each decoder level
   4. 5 encoder levels (vs 4 in V1) for finer multi-scale features
@@ -104,20 +104,20 @@ class RepSegNetV2(nn.Module):
     RepSegNet V2 with pretrained EfficientNet encoder.
 
     Architecture:
-      Encoder: EfficientNet-B0 (pretrained on ImageNet)
+      Encoder: EfficientNet-B3 (pretrained on ImageNet)
       Skip:    SCSE attention on each skip connection
       Decoder: Conv-BN-ReLU × 2 + SCSE + Dropout
       Output:  Deep supervision (auxiliary heads at each decoder level)
 
     Args:
-        encoder_name: timm model name (default: 'efficientnet_b0')
+        encoder_name: timm model name (default: 'efficientnet_b3')
         in_channels: input channels (default: 3)
         out_channels: output channels (default: 1 for binary segmentation)
         decoder_channels: decoder feature sizes at each level
         dropout: dropout rate in decoder blocks
         deep_supervision: if True, return list of outputs during training
     """
-    def __init__(self, encoder_name='efficientnet_b0', in_channels=3,
+    def __init__(self, encoder_name='efficientnet_b3', in_channels=3,
                  out_channels=1, decoder_channels=(256, 128, 64, 32, 16),
                  dropout=0.1, deep_supervision=True):
         super().__init__()
@@ -130,7 +130,7 @@ class RepSegNetV2(nn.Module):
         )
 
         # Get encoder channel sizes from the model
-        # EfficientNet-B0: [16, 24, 40, 112, 320] for 5 feature levels
+        # EfficientNet-B3: [24, 32, 48, 136, 384] for 5 feature levels
         encoder_channels = self.encoder.feature_info.channels()
         self.num_levels = len(encoder_channels)
 
@@ -217,7 +217,7 @@ class RepSegNetV2(nn.Module):
         return out
 
 
-def get_repsegnet_v2(encoder_name='efficientnet_b0', in_channels=3,
+def get_repsegnet_v2(encoder_name='efficientnet_b3', in_channels=3,
                      out_channels=1, deep_supervision=True, dropout=0.1):
     """Factory function for RepSegNet V2."""
     return RepSegNetV2(

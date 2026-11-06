@@ -6,6 +6,7 @@ Optimized for Render Free Tier (512MB RAM) using lazy loading and garbage collec
 import os
 import io
 import base64
+import tempfile
 import numpy as np
 import gc
 from flask import Flask, request, jsonify, render_template
@@ -107,84 +108,92 @@ def predict():
     file  = request.files['image']
     image = Image.open(file.stream).convert("RGB")
 
-    # Save temp file for XAI (needs file path)
-    tmp_path = os.path.join("outputs", "_tmp_upload.png")
-    os.makedirs("outputs", exist_ok=True)
+    # Save temp file for XAI (needs file path) safely avoiding race conditions
+    tmp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+    tmp_path = tmp_file.name
+    tmp_file.close()
     image.save(tmp_path)
 
-    # ── Classification ──────────────────────────────────────────────────────
     try:
-        from xai import predict as clf_predict
-        clf_model = get_clf()
-        class_name, confidence, probs = clf_predict(clf_model, tmp_path, DEVICE)
-        prob_dict = {CLASS_NAMES[i]: float(probs[i] * 100) for i in range(len(CLASS_NAMES))}
-    except Exception as e:
-        return jsonify({'error': f'Classification failed: {str(e)}'}), 500
-
-    # ── Segmentation ────────────────────────────────────────────────────────
-    seg_b64 = None
-    repseg_b64 = None
-    if os.path.exists(UNETPP_CHECKPOINT):
+        # ── Classification ──────────────────────────────────────────────────────
         try:
-            seg_b64 = run_segmentation(image, use_repseg=False)
+            from xai import predict as clf_predict
+            clf_model = get_clf()
+            class_name, confidence, probs = clf_predict(clf_model, tmp_path, DEVICE)
+            prob_dict = {CLASS_NAMES[i]: float(probs[i] * 100) for i in range(len(CLASS_NAMES))}
         except Exception as e:
-            print(f"[app.py] UNet++ Segmentation error: {e}")
-            
-    if os.path.exists(REPSEGNET_CHECKPOINT):
+            return jsonify({'error': f'Classification failed: {str(e)}'}), 500
+
+        # ── Segmentation ────────────────────────────────────────────────────────
+        seg_b64 = None
+        repseg_b64 = None
+        if os.path.exists(UNETPP_CHECKPOINT):
+            try:
+                seg_b64 = run_segmentation(image, use_repseg=False)
+            except Exception as e:
+                print(f"[app.py] UNet++ Segmentation error: {e}")
+                
+        if os.path.exists(REPSEGNET_CHECKPOINT):
+            try:
+                repseg_b64 = run_segmentation(image, use_repseg=True)
+            except Exception as e:
+                print(f"[app.py] RepSegNet Segmentation error: {e}")
+
+        # ── XAI: Grad-CAM, Grad-CAM++, Score-CAM ───────────────────────────────
+        cam_results = {}
         try:
-            repseg_b64 = run_segmentation(image, use_repseg=True)
+            from xai import generate_all_cams, cam_to_base64
+            clf_model = get_clf()
+            cams = generate_all_cams(clf_model, tmp_path, DEVICE)
+            cam_results = {name: cam_to_base64(overlay) for name, overlay in cams.items()}
         except Exception as e:
-            print(f"[app.py] RepSegNet Segmentation error: {e}")
+            print(f"[app.py] CAM error: {e}")
 
-    # ── XAI: Grad-CAM, Grad-CAM++, Score-CAM ───────────────────────────────
-    cam_results = {}
-    try:
-        from xai import generate_all_cams, cam_to_base64
-        clf_model = get_clf()
-        cams = generate_all_cams(clf_model, tmp_path, DEVICE)
-        cam_results = {name: cam_to_base64(overlay) for name, overlay in cams.items()}
-    except Exception as e:
-        print(f"[app.py] CAM error: {e}")
+        # ── LIME ─────────────────────────────────────────────────────────────────
+        lime_b64 = None
+        try:
+            from xai_lime import generate_lime, lime_to_base64
+            import matplotlib
+            matplotlib.use('Agg') # Ensure headless mode
+            clf_model = get_clf()
+            lime_overlay = generate_lime(clf_model, tmp_path, n_samples=300)  # Lower samples for Render memory
+            lime_b64 = lime_to_base64(lime_overlay)
+        except Exception as e:
+            print(f"[app.py] LIME error: {e}")
 
-    # ── LIME ─────────────────────────────────────────────────────────────────
-    lime_b64 = None
-    try:
-        from xai_lime import generate_lime, lime_to_base64
-        import matplotlib
-        matplotlib.use('Agg') # Ensure headless mode
-        clf_model = get_clf()
-        lime_overlay = generate_lime(clf_model, tmp_path, n_samples=300)  # Lower samples for Render memory
-        lime_b64 = lime_to_base64(lime_overlay)
-    except Exception as e:
-        print(f"[app.py] LIME error: {e}")
+        # ── SHAP ──────────────────────────────────────────────────────────────────
+        shap_b64 = None
+        try:
+            from xai_shap import generate_shap, shap_to_base64
+            import matplotlib
+            matplotlib.use('Agg') # Ensure headless mode
+            clf_model = get_clf()
+            shap_overlay = generate_shap(clf_model, tmp_path)
+            shap_b64 = shap_to_base64(shap_overlay)
+        except Exception as e:
+            print(f"[app.py] SHAP error: {e}")
 
-    # ── SHAP ──────────────────────────────────────────────────────────────────
-    shap_b64 = None
-    try:
-        from xai_shap import generate_shap, shap_to_base64
-        import matplotlib
-        matplotlib.use('Agg') # Ensure headless mode
-        clf_model = get_clf()
-        shap_overlay = generate_shap(clf_model, tmp_path)
-        shap_b64 = shap_to_base64(shap_overlay)
-    except Exception as e:
-        print(f"[app.py] SHAP error: {e}")
+        # Free memory
+        gc.collect()
 
-    # Free memory
-    gc.collect()
-
-    return jsonify({
-        'class':       class_name,
-        'confidence':  round(confidence, 2),
-        'probabilities': prob_dict,
-        'segmentation':  seg_b64,
-        'repsegnet':     repseg_b64,
-        'gradcam':       cam_results.get('Grad-CAM'),
-        'gradcampp':     cam_results.get('Grad-CAM++'),
-        'scorecam':      cam_results.get('Score-CAM'),
-        'lime':          lime_b64,
-        'shap':          shap_b64,
-    })
+        return jsonify({
+            'class':       class_name,
+            'confidence':  round(confidence, 2),
+            'probabilities': prob_dict,
+            'segmentation':  seg_b64,
+            'repsegnet':     repseg_b64,
+            'gradcam':       cam_results.get('Grad-CAM'),
+            'gradcampp':     cam_results.get('Grad-CAM++'),
+            'scorecam':      cam_results.get('Score-CAM'),
+            'lime':          lime_b64,
+            'shap':          shap_b64,
+        })
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
 
 @app.route('/health')

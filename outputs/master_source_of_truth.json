@@ -175,7 +175,8 @@
       "hd95": 18.2,
       "assd": 6.8,
       "params_M": 14.82,
-      "gflops": 8.65
+      "gflops": 8.65,
+      "estimated": true
     },
     "+ Concurrent sCSE Attention on Skips": {
       "dice": 75.82,
@@ -183,7 +184,8 @@
       "hd95": 14.6,
       "assd": 5.2,
       "params_M": 14.95,
-      "gflops": 8.74
+      "gflops": 8.74,
+      "estimated": true
     },
     "+ Multi-Scale Deep Supervision": {
       "dice": 78.14,
@@ -191,7 +193,8 @@
       "hd95": 12.8,
       "assd": 4.5,
       "params_M": 15.07,
-      "gflops": 8.86
+      "gflops": 8.86,
+      "estimated": true
     },
     "+ Connected-Component Post-Processing (Full V2)": {
       "dice": 79.73586047947786,
@@ -199,7 +202,8 @@
       "hd95": 50.41468132805892,
       "assd": 18.669555855526333,
       "params_M": 15.07,
-      "gflops": 8.86
+      "gflops": 8.86,
+      "estimated": false
     }
   }
 }

@@ -27,7 +27,7 @@ from albumentations.pytorch import ToTensorV2
 from thop import profile
 
 from config import (
-    DEVICE, OUTPUT_DIR, SEG_IMG_SIZE, SEG_ENCODER_NAME,
+    BASE_DIR, DEVICE, OUTPUT_DIR, SEG_IMG_SIZE, SEG_ENCODER_NAME,
     UNET_CHECKPOINT, UNETPP_CHECKPOINT,
     REPSEGNET_CHECKPOINT, REPSEGNET_V2_CHECKPOINT
 )
@@ -204,8 +204,8 @@ def main():
 
     # 4. External Generalization Benchmark on UDIAT Dataset B (N=163)
     print("\n[4/5] Evaluating External Generalization on UDIAT Dataset B...", flush=True)
-    udiat_files = sorted(glob.glob("F:/Amit/Cancer Detection/UDIAT-Dataset/UDIAT_Dataset_B/UDIAT_Dataset_B/original/*.png"))
-    udiat_gt = sorted(glob.glob("F:/Amit/Cancer Detection/UDIAT-Dataset/UDIAT_Dataset_B/UDIAT_Dataset_B/GT/*.png"))
+    udiat_files = sorted(glob.glob(os.path.join(BASE_DIR, "UDIAT-Dataset", "UDIAT_Dataset_B", "UDIAT_Dataset_B", "original", "*.png")))
+    udiat_gt = sorted(glob.glob(os.path.join(BASE_DIR, "UDIAT-Dataset", "UDIAT_Dataset_B", "UDIAT_Dataset_B", "GT", "*.png")))
 
     udiat_metrics = {k: [] for k in ['Classic U-Net', 'UNet++', 'RepSegNet V1', 'RepSegNet V2 (Proposed)']}
     
@@ -215,9 +215,9 @@ def main():
         ToTensorV2()
     ])
 
-    for img_p, gt_p in zip(udiat_files, udiat_gt):
+    for img_p, zip_gt in zip(udiat_files, udiat_gt):
         img = cv2.cvtColor(cv2.imread(img_p), cv2.COLOR_BGR2RGB)
-        gt = (cv2.imread(gt_p, cv2.IMREAD_GRAYSCALE) > 127).astype(np.uint8)
+        gt = (cv2.imread(zip_gt, cv2.IMREAD_GRAYSCALE) > 127).astype(np.uint8)
         gt_512 = cv2.resize(gt, (512, 512), interpolation=cv2.INTER_NEAREST)
 
         t_res = transform_512(image=img)
@@ -237,23 +237,27 @@ def main():
     with open('outputs/computational_complexity_metrics.json') as f:
         comp_metrics = json.load(f)
 
-    # 6. Real Ablation Breakdown
+    # 6. Real Ablation Breakdown (Rows A-C are estimated, Row D is measured)
     ablation_study = {
         'Baseline (EfficientNet-B3 + Standard Decoder)': {
-            'dice': 72.45, 'iou': 62.10, 'hd95': 18.2, 'assd': 6.8, 'params_M': 14.82, 'gflops': 8.65
+            'dice': 72.45, 'iou': 62.10, 'hd95': 18.2, 'assd': 6.8, 'params_M': 14.82, 'gflops': 8.65,
+            'estimated': True
         },
         '+ Concurrent sCSE Attention on Skips': {
-            'dice': 75.82, 'iou': 66.40, 'hd95': 14.6, 'assd': 5.2, 'params_M': 14.95, 'gflops': 8.74
+            'dice': 75.82, 'iou': 66.40, 'hd95': 14.6, 'assd': 5.2, 'params_M': 14.95, 'gflops': 8.74,
+            'estimated': True
         },
         '+ Multi-Scale Deep Supervision': {
-            'dice': 78.14, 'iou': 69.25, 'hd95': 12.8, 'assd': 4.5, 'params_M': 15.07, 'gflops': 8.86
+            'dice': 78.14, 'iou': 69.25, 'hd95': 12.8, 'assd': 4.5, 'params_M': 15.07, 'gflops': 8.86,
+            'estimated': True
         },
         '+ Connected-Component Post-Processing (Full V2)': {
             'dice': busi_results['RepSegNet V2 (Proposed)']['dice'],
             'iou': busi_results['RepSegNet V2 (Proposed)']['iou'],
             'hd95': busi_results['RepSegNet V2 (Proposed)']['hd95'],
             'assd': busi_results['RepSegNet V2 (Proposed)']['assd'],
-            'params_M': 15.07, 'gflops': 8.86
+            'params_M': 15.07, 'gflops': 8.86,
+            'estimated': False
         }
     }
 

@@ -1,7 +1,7 @@
 """
 evaluate_udiat_generalization.py
 Evaluates trained segmentation models (U-Net, UNet++, RepSegNet V1, RepSegNet V2)
-on the external UDIAT Dataset B (163 images) and In-house dataset (15 images).
+on the external UDIAT Dataset B (163 images).
 Computes exact empirical out-of-distribution generalization metrics:
 Accuracy, Precision, Recall/Sensitivity, F1-Score, Dice, IoU.
 Generates qualitative comparison figure and saves metrics to JSON.
@@ -22,7 +22,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 from config import (
-    DEVICE, OUTPUT_DIR, SEG_IMG_SIZE, SEG_ENCODER_NAME,
+    BASE_DIR, DEVICE, OUTPUT_DIR, SEG_IMG_SIZE, SEG_ENCODER_NAME,
     UNET_CHECKPOINT, UNETPP_CHECKPOINT,
     REPSEGNET_CHECKPOINT, REPSEGNET_V2_CHECKPOINT
 )
@@ -168,14 +168,10 @@ def evaluate_dataset(dataset_name, dataset, models_dict, device, use_tta=True):
 
 
 def main():
-    udiat_orig = sorted(glob.glob("F:/Amit/Cancer Detection/UDIAT-Dataset/UDIAT_Dataset_B/UDIAT_Dataset_B/original/*.png"))
-    udiat_gt   = sorted(glob.glob("F:/Amit/Cancer Detection/UDIAT-Dataset/UDIAT_Dataset_B/UDIAT_Dataset_B/GT/*.png"))
-
-    inhouse_orig = sorted(glob.glob("F:/Amit/Cancer Detection/UDIAT-Dataset/In-house/Tumor with masks/images/*.png"))
-    inhouse_gt   = sorted(glob.glob("F:/Amit/Cancer Detection/UDIAT-Dataset/In-house/Tumor with masks/masks/*.png"))
+    udiat_orig = sorted(glob.glob(os.path.join(BASE_DIR, "UDIAT-Dataset", "UDIAT_Dataset_B", "UDIAT_Dataset_B", "original", "*.png")))
+    udiat_gt   = sorted(glob.glob(os.path.join(BASE_DIR, "UDIAT-Dataset", "UDIAT_Dataset_B", "UDIAT_Dataset_B", "GT", "*.png")))
 
     udiat_ds = ExternalDataset(udiat_orig, udiat_gt)
-    inhouse_ds = ExternalDataset(inhouse_orig, inhouse_gt)
 
     # Load models
     models = {}
@@ -199,18 +195,11 @@ def main():
     # 1. Run UDIAT Dataset B evaluation
     udiat_results, udiat_samples = evaluate_dataset("UDIAT_Dataset_B", udiat_ds, models, DEVICE, use_tta=True)
 
-    # 2. Run In-house evaluation
-    inhouse_results, _ = evaluate_dataset("In-house", inhouse_ds, models, DEVICE, use_tta=True)
-
     # Save to JSON
     final_output = {
         "UDIAT_Dataset_B": {
             "num_images": len(udiat_ds),
             "metrics": udiat_results
-        },
-        "In_house_Dataset": {
-            "num_images": len(inhouse_ds),
-            "metrics": inhouse_results
         }
     }
 

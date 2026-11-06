@@ -17,32 +17,12 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from config import (
-    DEVICE, NUM_EPOCHS, LEARNING_RATE, BATCH_SIZE, DICE_BCE_LAMBDA,
+    DEVICE, NUM_EPOCHS, LEARNING_RATE, BATCH_SIZE,
     EARLY_STOP_PATIENCE, UNET_CHECKPOINT, UNETPP_CHECKPOINT, OUTPUT_DIR
 )
 from seg_dataset import get_seg_dataloaders
 from unet import get_unet
 from unet_plus_plus import get_unetpp
-
-
-def parse_unet_history_from_log():
-    log_path = r"C:\Users\Amit_Addi\.gemini\antigravity-ide\brain\5f29cf81-dab1-4253-a6f2-8ea22e0cb9e3\.system_generated\tasks\task-141.log"
-    history = {'train_loss': [], 'val_loss': [], 'train_dice': [], 'val_dice': []}
-    if not os.path.exists(log_path):
-        return None
-    import re
-    pattern = re.compile(r"Epoch\s+\[\s*(\d+)/\d+\]\s+Loss:\s+([\d\.]+)/([\d\.]+)\s+Dice:\s+([\d\.]+)/([\d\.]+)")
-    with open(log_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            if "[U-Net] Training complete." in line:
-                break
-            match = pattern.search(line)
-            if match:
-                history['train_loss'].append(float(match.group(2)))
-                history['val_loss'].append(float(match.group(3)))
-                history['train_dice'].append(float(match.group(4)))
-                history['val_dice'].append(float(match.group(5)))
-    return history
 
 
 
@@ -250,20 +230,11 @@ def train_segmentation(epochs: int = NUM_EPOCHS):
     histories = {}
 
     # -- Train U-Net ----------------------------------------------------------
-    unet_checkpoint_exists = os.path.exists(UNET_CHECKPOINT)
-    hist_unet = None
-    if unet_checkpoint_exists:
-        print("[train_segmentation] Found existing U-Net checkpoint. Trying to load history from log...")
-        hist_unet = parse_unet_history_from_log()
-
-    if hist_unet is None or len(hist_unet['train_loss']) == 0:
-        print("[train_segmentation] Training U-Net from scratch...")
-        unet = get_unet().to(DEVICE)
-        hist_unet = train_model(unet, "U-Net", UNET_CHECKPOINT,
-                                train_l, val_l, epochs, is_unetpp=False)
-        del unet
-    else:
-        print(f"[train_segmentation] Loaded U-Net history ({len(hist_unet['train_loss'])} epochs). Skipping training.")
+    print("[train_segmentation] Training U-Net...")
+    unet = get_unet().to(DEVICE)
+    hist_unet = train_model(unet, "U-Net", UNET_CHECKPOINT,
+                            train_l, val_l, epochs, is_unetpp=False)
+    del unet
 
     histories["U-Net"] = hist_unet
 
